@@ -16,7 +16,7 @@ export default function SuccessScreen() {
     });
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto px-4 py-8 pb-32">
             {/* Celebration Header */}
             <div className="text-center mb-8 animate-fade-in">
                 {/* Animated checkmark */}
@@ -109,13 +109,38 @@ export default function SuccessScreen() {
             </div>
 
             {/* Action */}
-            <button
-                onClick={() => window.location.reload()}
-                className="w-full bg-white text-gray-700 font-bold py-4 rounded-2xl card-shadow hover:card-shadow-hover hover:-translate-y-0.5 transition-all duration-300 text-sm flex items-center justify-center gap-2"
-            >
-                <span className="text-lg">🛒</span>
-                Continue Shopping
-            </button>
+            <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md pt-4 pb-6 px-4 border-t border-gray-100 z-10">
+                <div className="max-w-2xl mx-auto">
+                    <button
+                        onClick={() => {
+                            const storedState = localStorage.getItem("ecoyaan_checkout_state");
+                            let addressesToKeep = [];
+                            if (storedState) {
+                                try {
+                                    const parsed = JSON.parse(storedState);
+                                    if (parsed.savedAddresses) {
+                                        addressesToKeep = parsed.savedAddresses;
+                                    }
+                                } catch (e) {
+                                    // ignore
+                                }
+                            }
+
+                            const newState = {
+                                savedAddresses: addressesToKeep,
+                                currentStep: "cart",
+                            };
+
+                            localStorage.setItem("ecoyaan_checkout_state", JSON.stringify(newState));
+                            window.location.reload();
+                        }}
+                        className="w-full bg-white text-gray-700 font-bold py-4 rounded-2xl card-shadow hover:card-shadow-hover hover:-translate-y-0.5 transition-all duration-300 text-sm flex items-center justify-center gap-2"
+                    >
+                        <span className="text-lg">🛒</span>
+                        Continue Shopping
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

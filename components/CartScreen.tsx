@@ -9,7 +9,7 @@ export default function CartScreen() {
         useCheckout();
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto px-4 py-8 pb-32">
             <StepIndicator currentStep="cart" />
 
             {/* Header */}
@@ -94,17 +94,21 @@ export default function CartScreen() {
                 </div>
             </div>
 
-            {/* CTA */}
-            <button
-                onClick={() => setCurrentStep("shipping")}
-                disabled={cartItems.length === 0}
-                className="w-full bg-gradient-to-r from-eco-green to-emerald-600 text-white font-bold py-4 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 text-base flex items-center justify-center gap-2 btn-glow disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:shadow-none"
-            >
-                Proceed to Checkout
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-            </button>
+            {/* Sticky CTA */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md pt-4 pb-6 px-4 border-t border-gray-100 z-10">
+                <div className="max-w-2xl mx-auto">
+                    <button
+                        onClick={() => setCurrentStep("shipping")}
+                        disabled={cartItems.length === 0}
+                        className="w-full bg-gradient-to-r from-eco-green to-emerald-600 text-white font-bold py-4 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 text-base flex items-center justify-center gap-2 btn-glow disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:shadow-none"
+                    >
+                        Proceed to Checkout
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

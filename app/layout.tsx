@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CheckoutProvider } from "@/context/CheckoutContext";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 export const metadata: Metadata = {
   title: "Ecoyaan Checkout — Sustainable Shopping",
@@ -13,7 +14,8 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen">
+      <body className="antialiased min-h-screen relative">
+        <AnimatedBackground />
         <CheckoutProvider>
           {/* Sticky Header */}
           <header className="sticky top-0 z-50 glass border-b border-black/[0.04]">

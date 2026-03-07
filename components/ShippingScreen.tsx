@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCheckout } from "@/context/CheckoutContext";
 import { ShippingAddress } from "@/lib/types";
 import StepIndicator from "@/components/StepIndicator";
@@ -15,28 +15,7 @@ const INDIAN_STATES = [
     "Delhi", "Jammu & Kashmir", "Ladakh", "Lakshadweep", "Puducherry",
 ];
 
-const SAVED_ADDRESSES: ShippingAddress[] = [
-    {
-        fullName: "Anuj Nimmala",
-        email: "anuj@ecoyaan.com",
-        phone: "9876543210",
-        addressLine1: "Block A, West Avenue",
-        addressLine2: "45th Street, Koramangala",
-        city: "Bengaluru",
-        state: "Karnataka",
-        pinCode: "560001",
-    },
-    {
-        fullName: "Anuj Nimmala",
-        email: "anuj@ecoyaan.com",
-        phone: "9876543210",
-        addressLine1: "Flat 302, Lotus Towers",
-        addressLine2: "Andheri West",
-        city: "Mumbai",
-        state: "Maharashtra",
-        pinCode: "400001",
-    },
-];
+
 
 type FormFields = keyof ShippingAddress;
 
@@ -52,6 +31,7 @@ interface FieldErrors {
 }
 
 const initialForm: ShippingAddress = {
+    id: "",
     fullName: "",
     email: "",
     phone: "",
@@ -112,8 +92,8 @@ function InputField({ label, id, type = "text", placeholder, value, error, requi
                 maxLength={maxLength}
                 onChange={(e) => onChange(id, e.target.value)}
                 className={`w-full px-4 py-3 rounded-xl border text-sm font-medium bg-gray-50 text-gray-900 placeholder:text-gray-300 transition-all duration-200 outline-none ${error
-                        ? "border-red-300 bg-red-50/30 focus:ring-2 focus:ring-red-200"
-                        : "border-gray-200 focus:border-eco-green focus:bg-white focus:ring-2 focus:ring-eco-green/10 hover:border-gray-300"
+                    ? "border-red-300 bg-red-50/30 focus:ring-2 focus:ring-red-200"
+                    : "border-gray-200 focus:border-eco-green focus:bg-white focus:ring-2 focus:ring-eco-green/10 hover:border-gray-300"
                     }`}
             />
             {error && (
@@ -127,40 +107,63 @@ function InputField({ label, id, type = "text", placeholder, value, error, requi
 }
 
 export default function ShippingScreen() {
-    const { setShippingAddress, setCurrentStep } = useCheckout();
+    const { savedAddresses, addSavedAddress, removeSavedAddress, shippingAddress, setShippingAddress, setCurrentStep, isLoaded } = useCheckout();
     const [form, setForm] = useState<ShippingAddress>(initialForm);
     const [errors, setErrors] = useState<FieldErrors>({});
     const [touched, setTouched] = useState<Partial<Record<FormFields, boolean>>>({});
-    const [selectedSavedIndex, setSelectedSavedIndex] = useState<number | null>(null);
     const [useNewAddress, setUseNewAddress] = useState(false);
+
+    useEffect(() => {
+        if (!isLoaded) return;
+        // Sync local form state with context on initial load or reload
+        if (!useNewAddress && (!form.id || form.id === "new")) {
+            if (shippingAddress) {
+                setForm(shippingAddress);
+            } else if (savedAddresses.length > 0) {
+                setForm(savedAddresses[0]);
+            }
+        }
+    }, [isLoaded, shippingAddress, savedAddresses, useNewAddress, form.id]);
 
     const handleChange = (field: FormFields, value: string) => {
         setForm((prev) => ({ ...prev, [field]: value }));
         if (touched[field]) {
-            const newErrors = validate({ ...form, [field]: value });
-            setErrors((prev) => ({ ...prev, [field]: newErrors[field] }));
+            const newErrors = validate({ ...form, [field]: value } as ShippingAddress);
+            setErrors((prev) => ({ ...prev, [field]: newErrors[field as keyof FieldErrors] }));
         }
     };
 
     const handleBlur = (field: FormFields) => {
         setTouched((prev) => ({ ...prev, [field]: true }));
         const newErrors = validate(form);
-        setErrors((prev) => ({ ...prev, [field]: newErrors[field] }));
-    };
-
-    const handleSelectSavedAddress = (index: number) => {
-        setSelectedSavedIndex(index);
-        setUseNewAddress(false);
-        setForm(SAVED_ADDRESSES[index]);
-        setErrors({});
+        setErrors((prev) => ({ ...prev, [field]: newErrors[field as keyof FieldErrors] }));
     };
 
     const handleUseNewAddress = () => {
-        setSelectedSavedIndex(null);
         setUseNewAddress(true);
-        setForm(initialForm);
+        setForm({ ...initialForm, id: "new" });
         setErrors({});
         setTouched({});
+    };
+
+    const handleSaveAddress = () => {
+        const allTouched = Object.keys(initialForm).reduce(
+            (acc, k) => ({ ...acc, [k]: true }),
+            {}
+        ) as Record<FormFields, boolean>;
+        setTouched(allTouched);
+        const newErrors = validate(form);
+        setErrors(newErrors);
+        if (Object.keys(newErrors).length === 0) {
+            const finalAddress = {
+                ...form,
+                id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+            };
+            addSavedAddress(finalAddress);
+            setForm(finalAddress);
+            setUseNewAddress(false);
+            setShippingAddress(finalAddress);
+        }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -173,15 +176,23 @@ export default function ShippingScreen() {
         const newErrors = validate(form);
         setErrors(newErrors);
         if (Object.keys(newErrors).length === 0) {
-            setShippingAddress(form);
+            let finalAddress = form;
+            if (!finalAddress.id || finalAddress.id === "new") {
+                finalAddress = {
+                    ...form,
+                    id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+                };
+                addSavedAddress(finalAddress);
+            }
+            setShippingAddress(finalAddress);
             setCurrentStep("payment");
         }
     };
 
-    const showForm = useNewAddress || selectedSavedIndex !== null;
+    const showForm = useNewAddress || savedAddresses.length === 0;
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto px-4 py-8 pb-32">
             <StepIndicator currentStep="shipping" />
 
             {/* Header */}
@@ -196,35 +207,45 @@ export default function ShippingScreen() {
             </div>
 
             {/* Saved Addresses */}
-            {SAVED_ADDRESSES.length > 0 && (
+            {savedAddresses.length > 0 && (
                 <div className="mb-5">
                     <div className="flex items-center gap-2 mb-3">
                         <span className="text-sm">🏠</span>
                         <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">Saved Addresses</h2>
                     </div>
                     <div className="space-y-2">
-                        {SAVED_ADDRESSES.map((addr, index) => (
+                        {savedAddresses.map((addr, index) => (
                             <label
-                                key={index}
-                                className={`flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${selectedSavedIndex === index
-                                        ? "border-eco-green bg-eco-green/5 shadow-sm shadow-eco-green/10"
-                                        : "border-gray-100 bg-white hover:border-eco-green/30 hover:bg-gray-50 card-shadow"
+                                key={addr.id}
+                                className={`flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${!useNewAddress && form.id === addr.id
+                                    ? "border-eco-green bg-eco-green/5 shadow-sm shadow-eco-green/10"
+                                    : "border-gray-100 bg-white hover:border-eco-green/30 hover:bg-gray-50 card-shadow"
                                     }`}
-                                onClick={() => handleSelectSavedAddress(index)}
+                                onClick={() => {
+                                    setUseNewAddress(false);
+                                    setForm(addr);
+                                    setErrors({});
+                                    setTouched({});
+                                }}
                             >
                                 <input
                                     type="radio"
                                     name="savedAddress"
-                                    checked={selectedSavedIndex === index}
-                                    onChange={() => handleSelectSavedAddress(index)}
+                                    checked={!useNewAddress && form.id === addr.id}
+                                    onChange={() => {
+                                        setUseNewAddress(false);
+                                        setForm(addr);
+                                        setErrors({});
+                                        setTouched({});
+                                    }}
                                     className="accent-eco-green mt-1 w-4 h-4"
                                 />
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-0.5">
                                         <p className="font-bold text-sm text-gray-900">{addr.fullName}</p>
-                                        {index === 0 && (
+                                        {shippingAddress?.id === addr.id && (
                                             <span className="text-[10px] bg-eco-green/10 text-eco-green font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                                Default
+                                                Selected
                                             </span>
                                         )}
                                     </div>
@@ -236,6 +257,32 @@ export default function ShippingScreen() {
                                     </p>
                                     <p className="text-xs text-gray-400 mt-0.5">{addr.phone} · {addr.email}</p>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        removeSavedAddress(addr.id);
+                                        if (shippingAddress?.id === addr.id) {
+                                            setShippingAddress(null as any);
+                                        }
+                                        if (form.id === addr.id) {
+                                            const remaining = savedAddresses.filter(a => a.id !== addr.id);
+                                            if (remaining.length > 0) {
+                                                setForm(remaining[0]);
+                                            } else {
+                                                setUseNewAddress(true);
+                                                setForm({ ...initialForm, id: "new" });
+                                            }
+                                        }
+                                    }}
+                                    className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 focus:bg-red-50 rounded-xl transition-colors ml-2 flex-shrink-0"
+                                    title="Delete Address"
+                                >
+                                    <svg className="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
                             </label>
                         ))}
                     </div>
@@ -243,8 +290,8 @@ export default function ShippingScreen() {
                     <button
                         onClick={handleUseNewAddress}
                         className={`mt-2 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-dashed text-sm font-bold transition-all duration-200 ${useNewAddress
-                                ? "border-eco-green text-eco-green bg-eco-green/5"
-                                : "border-gray-200 text-gray-400 hover:border-eco-green hover:text-eco-green"
+                            ? "border-eco-green text-eco-green bg-eco-green/5"
+                            : "border-gray-200 text-gray-400 hover:border-eco-green hover:text-eco-green"
                             }`}
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,10 +304,10 @@ export default function ShippingScreen() {
 
             {/* Address Form */}
             <form onSubmit={handleSubmit} noValidate>
-                {(showForm || SAVED_ADDRESSES.length === 0) && (
+                {showForm && (
                     <div className={`bg-white rounded-2xl card-shadow p-6 space-y-4 mb-5 transition-all duration-300 animate-slide-up ${useNewAddress ? "ring-2 ring-eco-green/20" : ""
                         }`}>
-                        {useNewAddress && (
+                        {useNewAddress && savedAddresses.length > 0 && (
                             <div className="flex items-center gap-2 mb-1">
                                 <div className="w-1.5 h-1.5 rounded-full bg-eco-green" />
                                 <p className="text-xs text-eco-green font-bold uppercase tracking-wider">New Address</p>
@@ -289,8 +336,8 @@ export default function ShippingScreen() {
                                     onChange={(e) => handleChange("state", e.target.value)}
                                     onBlur={() => handleBlur("state")}
                                     className={`w-full px-4 py-3 rounded-xl border text-sm font-medium bg-gray-50 text-gray-900 transition-all duration-200 outline-none ${errors.state
-                                            ? "border-red-300 bg-red-50/30 focus:ring-2 focus:ring-red-200"
-                                            : "border-gray-200 focus:border-eco-green focus:bg-white focus:ring-2 focus:ring-eco-green/10 hover:border-gray-300"
+                                        ? "border-red-300 bg-red-50/30 focus:ring-2 focus:ring-red-200"
+                                        : "border-gray-200 focus:border-eco-green focus:bg-white focus:ring-2 focus:ring-eco-green/10 hover:border-gray-300"
                                         }`}
                                 >
                                     <option value="">Select</option>
@@ -300,27 +347,39 @@ export default function ShippingScreen() {
                             </div>
                             <InputField label="PIN Code" id="pinCode" placeholder="560001" value={form.pinCode} error={errors.pinCode} onChange={handleChange} maxLength={6} />
                         </div>
+
+                        {(!form.id || form.id === "new") && (
+                            <button
+                                type="button"
+                                onClick={handleSaveAddress}
+                                className="w-full mt-2 bg-gradient-to-r from-eco-green to-emerald-600 text-white font-bold py-3.5 rounded-xl hover:-translate-y-0.5 transition-all duration-300 btn-glow shadow-sm"
+                            >
+                                Save Address
+                            </button>
+                        )}
                     </div>
                 )}
 
-                <div className="flex gap-3">
-                    <button
-                        type="button"
-                        onClick={() => setCurrentStep("cart")}
-                        className="flex-1 bg-white border-2 border-gray-200 text-gray-500 font-bold py-4 rounded-2xl hover:border-eco-green hover:text-eco-green transition-all duration-200 text-sm card-shadow"
-                    >
-                        ← Back
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={!showForm && SAVED_ADDRESSES.length > 0}
-                        className="flex-[2] bg-gradient-to-r from-eco-green to-emerald-600 text-white font-bold py-4 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 text-base flex items-center justify-center gap-2 btn-glow disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:shadow-none"
-                    >
-                        Continue to Payment
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                        </svg>
-                    </button>
+                <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md pt-4 pb-6 px-4 border-t border-gray-100 z-10">
+                    <div className="max-w-2xl mx-auto flex gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setCurrentStep("cart")}
+                            className="flex-1 bg-white border-2 border-gray-200 text-gray-500 font-bold py-4 rounded-2xl hover:border-eco-green hover:text-eco-green transition-all duration-200 text-sm card-shadow"
+                        >
+                            ← Back
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={!showForm && savedAddresses.length === 0}
+                            className="flex-[2] bg-gradient-to-r from-eco-green to-emerald-600 text-white font-bold py-4 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 text-base flex items-center justify-center gap-2 btn-glow disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:shadow-none"
+                        >
+                            Continue to Payment
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

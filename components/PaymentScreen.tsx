@@ -33,7 +33,7 @@ export default function PaymentScreen() {
     ];
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto px-4 py-8 pb-32">
             <StepIndicator currentStep="payment" />
 
             {/* Header */}
@@ -131,8 +131,8 @@ export default function PaymentScreen() {
                         <label
                             key={m.key}
                             className={`flex items-center gap-3.5 p-3.5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${paymentMethod === m.key
-                                    ? "border-eco-green bg-eco-green/5 shadow-sm shadow-eco-green/10"
-                                    : "border-gray-100 hover:border-eco-green/30 hover:bg-gray-50"
+                                ? "border-eco-green bg-eco-green/5 shadow-sm shadow-eco-green/10"
+                                : "border-gray-100 hover:border-eco-green/30 hover:bg-gray-50"
                                 }`}
                         >
                             <input
@@ -171,30 +171,32 @@ export default function PaymentScreen() {
             </div>
 
             {/* Buttons */}
-            <div className="flex gap-3">
-                <button
-                    onClick={() => setCurrentStep("shipping")}
-                    className="flex-1 bg-white border-2 border-gray-200 text-gray-500 font-bold py-4 rounded-2xl hover:border-eco-green hover:text-eco-green transition-all duration-200 text-sm card-shadow"
-                >
-                    ← Back
-                </button>
-                <button
-                    onClick={handlePay}
-                    disabled={loading}
-                    className="flex-[2] bg-gradient-to-r from-eco-green to-emerald-600 text-white font-bold py-4 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 text-base flex items-center justify-center gap-2 btn-glow disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-                >
-                    {loading ? (
-                        <>
-                            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                            Processing…
-                        </>
-                    ) : (
-                        <>🔒 Pay ₹{grandTotal.toLocaleString("en-IN")}</>
-                    )}
-                </button>
+            <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md pt-4 pb-6 px-4 border-t border-gray-100 z-10">
+                <div className="max-w-2xl mx-auto flex gap-3">
+                    <button
+                        onClick={() => setCurrentStep("shipping")}
+                        className="flex-1 bg-white border-2 border-gray-200 text-gray-500 font-bold py-4 rounded-2xl hover:border-eco-green hover:text-eco-green transition-all duration-200 text-sm card-shadow"
+                    >
+                        ← Back
+                    </button>
+                    <button
+                        onClick={handlePay}
+                        disabled={loading}
+                        className="flex-[2] bg-gradient-to-r from-eco-green to-emerald-600 text-white font-bold py-4 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 text-base flex items-center justify-center gap-2 btn-glow disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                    >
+                        {loading ? (
+                            <>
+                                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                                Processing…
+                            </>
+                        ) : (
+                            <>🔒 Pay ₹{grandTotal.toLocaleString("en-IN")}</>
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     );
